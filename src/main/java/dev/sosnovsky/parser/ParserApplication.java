@@ -44,20 +44,19 @@ public class ParserApplication {
                                 groups.get(wordNumberGroup).add(line);
                             } else {
                                 wordsWithPositionAndGroup.get(word).put(wordPosition, groupNumber);
+
+                                List<String> lineToGroup = new ArrayList<>();
+                                lineToGroup.add(line);
+                                groups.put(groupNumber++, lineToGroup);
                             }
                         } else {
                             Map<Integer, Integer> newMap = new HashMap<>();
                             newMap.put(wordPosition, groupNumber);
                             wordsWithPositionAndGroup.put(word, newMap);
 
-                            if (groups.containsKey(groupNumber)) {
-                                groups.get(groupNumber).add(line);
-                            } else {
-                                List<String> lineToGroup = new ArrayList<>();
-                                lineToGroup.add(line);
-                                groups.put(groupNumber, lineToGroup);
-                            }
-                            groupNumber++;
+                            List<String> lineToGroup = new ArrayList<>();
+                            lineToGroup.add(line);
+                            groups.put(groupNumber++, lineToGroup);
                         }
                     }
                     wordPosition++;
@@ -67,7 +66,8 @@ public class ParserApplication {
 
         writeResultToFile(groups);
 
-        System.out.println("Количество групп с 2 и более строками " + groups.values().stream().filter(list -> list.size() >= 2).count());
+        System.out.println("Количество групп с двумя и более строками: "
+                + groups.values().stream().filter(list -> list.size() >= 2).count());
 
 
         System.out.println("Время выполнения составило " + (System.currentTimeMillis() - startTime) / 1000.0 + " сек");
@@ -83,24 +83,26 @@ public class ParserApplication {
 
     private static void writeResultToFile(Map<Integer, List<String>> groups) throws IOException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("result.txt"))) {
-            writer.write("количество групп: " + groups.size());
-            writer.newLine();
+            writer.write("Количество групп: " + groups.size() + "\n");
 
             Set<Integer> keys = groups.keySet();
 
             for (Integer num : keys) {
-                writer.write("Группа " + num);
-                writer.newLine();
-                for (List<String> group : groups.values()) {
-                    writer.write(group.toString());
+                if (groups.get(num).size() > 1) {
+                    writer.write("\n Группа " + num);
                     writer.newLine();
-                }
 
+                    for (String group : groups.get(num)) {
+                        writer.write(group);
+                        writer.newLine();
+                    }
+                }
             }
 
         }
 
     }
+
 
     private static boolean isValid(String line) {
         long count = line.chars().filter(ch -> ch == '"').count();

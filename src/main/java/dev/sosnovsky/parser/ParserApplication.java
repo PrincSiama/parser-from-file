@@ -16,7 +16,7 @@ public class ParserApplication {
 //        String pathToFile = args[0];
 
         // номер группы, список строк группы
-        Map<Integer, List<String>> groups = new HashMap<>();
+        Map<Integer, List<String[]>> groups = new HashMap<>();
 
         // слово, номер позиции слова, номер группы
         Map<String, Map<Integer, Integer>> wordsWithPositionAndGroup = new HashMap<>();
@@ -31,37 +31,76 @@ public class ParserApplication {
         System.out.println();
         System.out.println("Из файла получено " + lines.size() + " уникальных строк");
 
-        int groupNumber = 1;
+        int groupIndex = 1;
         for (String line : lines) {
             int wordPosition = 0;
             if (isValid(line)) {
                 String[] words = line.split(";");
+                // позиция слова, группа
+                Set<Integer> lineGroups = new HashSet<>();
                 for (String word : words) {
                     if (isNotEmpty(word)) {
                         if (wordsWithPositionAndGroup.containsKey(word)) {
                             if (wordsWithPositionAndGroup.get(word).containsKey(wordPosition)) {
-                                int wordNumberGroup = wordsWithPositionAndGroup.get(word).get(wordPosition);
-                                groups.get(wordNumberGroup).add(line);
+                                int currentGroup = wordsWithPositionAndGroup.get(word).get(wordPosition);
+//                                groups.get(currentGroup).add(line);
+                                lineGroups.add(currentGroup);
                             } else {
-                                wordsWithPositionAndGroup.get(word).put(wordPosition, groupNumber);
-
-                                List<String> lineToGroup = new ArrayList<>();
-                                lineToGroup.add(line);
-                                groups.put(groupNumber++, lineToGroup);
+                                wordsWithPositionAndGroup.get(word).put(wordPosition, groupIndex);
+//                                List<String> lineToGroup = new ArrayList<>();
+//                                lineToGroup.add(line);
+//                                groups.put(groupIndex, lineToGroup);
+                                lineGroups.add(groupIndex);
                             }
                         } else {
                             Map<Integer, Integer> newMap = new HashMap<>();
-                            newMap.put(wordPosition, groupNumber);
+                            newMap.put(wordPosition, groupIndex);
                             wordsWithPositionAndGroup.put(word, newMap);
-
-                            List<String> lineToGroup = new ArrayList<>();
-                            lineToGroup.add(line);
-                            groups.put(groupNumber++, lineToGroup);
+//                            List<String> lineToGroup = new ArrayList<>();
+//                            lineToGroup.add(line);
+//                            groups.put(groupIndex, lineToGroup);
+                            lineGroups.add(groupIndex);
                         }
+
                     }
-                    wordPosition++;
+
                 }
+
+                if (lineGroups.size() == 1) {
+                    List<String[]> lineToGroup = new ArrayList<>();
+                    lineToGroup.add(words);
+                    groups.put(groupIndex, lineToGroup);
+                } else if (lineGroups.size() > 1) {
+                    List<Integer> groupIndexByLine = new ArrayList<>(lineGroups);
+                    int indexMainGroup = groupIndexByLine.get(0);
+                    List<String[]> mainGroup = groups.getOrDefault(indexMainGroup, new ArrayList<>());
+                    mainGroup.add(words);
+
+                    for (int i = 1; i < groupIndexByLine.size(); i++) {
+                        int indexMergeGroup = groupIndexByLine.get(i);
+                        if (groups.get(indexMergeGroup) != null) {
+                            List<String[]> mergeGroup = groups.get(indexMergeGroup);
+                            mainGroup.addAll(mergeGroup);
+                            for (String[] ws : groups.get(indexMergeGroup)) {
+                                for (int j = 0; j < ws.length; j++) {
+                                    String word = ws[i];
+                                    if (isNotEmpty(word)) {
+                                        wordsWithPositionAndGroup.get(word).put(j, indexMainGroup);
+                                    }
+                                }
+                            }
+                        }
+                        groups.put(indexMainGroup, mainGroup);
+                        groups.remove(indexMergeGroup);
+                    }
+                } else {
+                    continue;
+                }
+
+                wordPosition++;
             }
+            groupIndex++;
+
         }
 
         writeResultToFile(groups);
@@ -81,22 +120,22 @@ public class ParserApplication {
         }
     }
 
-    private static void writeResultToFile(Map<Integer, List<String>> groups) throws IOException {
+    private static void writeResultToFile(Map<Integer, List<String[]>> groups) throws IOException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("result.txt"))) {
             writer.write("Количество групп: " + groups.size() + "\n");
 
             Set<Integer> keys = groups.keySet();
 
             for (Integer num : keys) {
-                if (groups.get(num).size() > 1) {
+//                if (groups.get(num).size() > 1) {
                     writer.write("\n Группа " + num);
                     writer.newLine();
 
-                    for (String group : groups.get(num)) {
-                        writer.write(group);
+                    for (String[] group : groups.get(num)) {
+                        writer.write(Arrays.toString(group));
                         writer.newLine();
                     }
-                }
+//                }
             }
 
         }

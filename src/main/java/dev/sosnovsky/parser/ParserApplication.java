@@ -8,12 +8,12 @@ import java.util.stream.Collectors;
 public class ParserApplication {
 
     public static void main(String[] args) throws IOException {
-        /*if (args.length != 1) {
+        if (args.length != 1) {
             System.out.println("Для запуска используйте команду: java -Xmx1G -jar Parser-1.0.jar <file_for_read>");
             return;
         }
 
-        String pathToFile = args[0];*/
+        String pathToFile = args[0];
 
         // номер группы, список строк группы
         Map<Integer, Set<String[]>> groups = new HashMap<>();
@@ -24,19 +24,15 @@ public class ParserApplication {
 
         long startTime = System.currentTimeMillis();
 
-        String pathToFile = "lng2.txt";
+//        String pathToFile = "lng3.txt";
 
         Set<String> lines = getLinesFromFile(pathToFile);
-
-        System.out.println();
-        System.out.println("Из файла получено " + lines.size() + " уникальных строк");
 
         int groupIndex = 1;
         for (String line : lines) {
             int wordPosition = 0;
             if (isValid(line)) {
                 String[] words = line.split(";");
-                // главная группа для этой строки
                 Integer indexFirstGroup = null;
                 for (String word : words) {
                     if (isNotEmpty(word)) {
@@ -68,19 +64,21 @@ public class ParserApplication {
                             }
                         } else if (indexFirstGroup != currentGroup) {
                             Set<String[]> mainGroup = groups.get(indexFirstGroup);
-                            Set<String[]> mergeGroup = groups.getOrDefault(currentGroup, new HashSet<>());
-                            mergeGroup.add(words);
-                            mainGroup.addAll(mergeGroup);
-                            for (String[] s : mergeGroup) {
-                                for (int i = 0; i < s.length; i++) {
-                                    if (isNotEmpty(s[i])) {
-                                        if (wordsWithPositionAndGroup.get(s[i]) == null) {
-                                            wordsWithPositionAndGroup.put(s[i], new HashMap<>());
+                            mainGroup.add(words);
+                            Set<String[]> mergeGroup;
+                            if (groups.get(currentGroup) != null) {
+                                mergeGroup = groups.get(currentGroup);
+                                mainGroup.addAll(mergeGroup);
+                                for (String[] s : mergeGroup) {
+                                    for (int i = 0; i < s.length; i++) {
+                                        if (wordsWithPositionAndGroup.containsKey(s[i])) {
+                                            wordsWithPositionAndGroup.get(s[i]).put(i, indexFirstGroup);
                                         }
-                                        wordsWithPositionAndGroup.get(s[i]).put(i, indexFirstGroup);
                                     }
                                 }
                             }
+                            wordsWithPositionAndGroup.get(words[wordPosition]).put(wordPosition, indexFirstGroup);
+                            groups.put(indexFirstGroup, mainGroup);
                             groups.remove(currentGroup);
                         }
                     }
@@ -91,13 +89,13 @@ public class ParserApplication {
 
         writeResultToFile(groups);
 
-        System.out.println("Количество групп с двумя и более строками: "
+        System.out.println("\nКоличество групп с двумя и более строками: "
                 + groups.values().stream().filter(list -> list.size() >= 2).count());
-
 
         System.out.println("Время выполнения составило " + (System.currentTimeMillis() - startTime) / 1000.0 + " сек");
     }
 
+    //todo добавить фильтр пустых строк
     private static Set<String> getLinesFromFile(String pathToFile) {
         try (BufferedReader br = new BufferedReader(new FileReader(pathToFile))) {
             return br.lines().collect(Collectors.toSet());
@@ -107,6 +105,7 @@ public class ParserApplication {
         }
     }
 
+    //todo убрать скобки из вывода
     private static void writeResultToFile(Map<Integer, Set<String[]>> groups) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("result.txt"))) {
             writer.write("Количество групп с двумя и более строками: "

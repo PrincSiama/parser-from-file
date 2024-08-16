@@ -15,23 +15,18 @@ public class ParserApplication {
         String pathToFile = args[0];
 
         // номер группы, список строк группы
-        Map<Integer, Set<String[]>> groups = new HashMap<>();
+        Map<Integer, Set<String>> groups = new HashMap<>();
 
-        // слово, номер позиции слова, номер группы
-        Map<String, Map<Integer, Integer>> wordsWithPositionAndGroup = new HashMap<>();
+        // номер позиции слова, слово, номер группы
+        Map<Integer, Map<String, Integer>> wordsWithPositionAndGroup = new HashMap<>();
 
 
         long startTime = System.currentTimeMillis();
-
-//        String pathToFile = "lng3.txt";
-
-//        Set<String> lines = getLinesFromFile(pathToFile);
 
         try (BufferedReader reader = new BufferedReader(new FileReader(pathToFile))) {
             String line;
             int groupIndex = 1;
 
-//            for (String line : lines) {
             while ((line = reader.readLine()) != null) {
                 int wordPosition = 0;
                 if (isValid(line)) {
@@ -40,48 +35,49 @@ public class ParserApplication {
 
                     for (String word : words) {
                         if (isNotEmpty(word)) {
-                            int currentGroup = -1;
-                            if (wordsWithPositionAndGroup.containsKey(word)) {
-                                if (wordsWithPositionAndGroup.get(word).containsKey(wordPosition)) {
-                                    currentGroup = wordsWithPositionAndGroup.get(word).get(wordPosition);
+                            int currentGroup;
+                            if (wordsWithPositionAndGroup.containsKey(wordPosition)) {
+                                if (wordsWithPositionAndGroup.get(wordPosition).containsKey(word)) {
+                                    currentGroup = wordsWithPositionAndGroup.get(wordPosition).get(word);
                                 } else {
-                                    wordsWithPositionAndGroup.get(word).put(wordPosition, groupIndex);
+                                    wordsWithPositionAndGroup.get(wordPosition).put(word, groupIndex);
                                     currentGroup = groupIndex++;
                                 }
                             } else {
-                                Map<Integer, Integer> newMap = new HashMap<>();
-                                newMap.put(wordPosition, groupIndex);
-                                wordsWithPositionAndGroup.put(word, newMap);
+                                Map<String, Integer> newMap = new HashMap<>();
+                                newMap.put(word, groupIndex);
+                                wordsWithPositionAndGroup.put(wordPosition, newMap);
                                 currentGroup = groupIndex++;
                             }
 
                             if (indexFirstGroup == null) {
                                 indexFirstGroup = currentGroup;
                                 if (groups.containsKey(indexFirstGroup)) {
-                                    Set<String[]> listFromGroup = groups.get(indexFirstGroup);
-                                    listFromGroup.add(words);
+                                    Set<String> listFromGroup = groups.get(indexFirstGroup);
+                                    listFromGroup.add(line);
                                     groups.put(indexFirstGroup, listFromGroup);
                                 } else {
-                                    Set<String[]> newSet = new HashSet<>();
-                                    newSet.add(words);
+                                    Set<String> newSet = new HashSet<>(1);
+                                    newSet.add(line);
                                     groups.put(indexFirstGroup, newSet);
                                 }
                             } else if (indexFirstGroup != currentGroup) {
-                                Set<String[]> mainGroup = groups.get(indexFirstGroup);
-                                mainGroup.add(words);
-                                Set<String[]> mergeGroup;
+                                Set<String> mainGroup = groups.get(indexFirstGroup);
+                                mainGroup.add(line);
+                                Set<String> mergeGroup;
                                 if (groups.get(currentGroup) != null) {
                                     mergeGroup = groups.get(currentGroup);
                                     mainGroup.addAll(mergeGroup);
-                                    for (String[] s : mergeGroup) {
-                                        for (int i = 0; i < s.length; i++) {
-                                            if (wordsWithPositionAndGroup.containsKey(s[i])) {
-                                                wordsWithPositionAndGroup.get(s[i]).put(i, indexFirstGroup);
+                                    for (String s : mergeGroup) {
+                                        String[] ws = s.split(";");
+                                        for (int i = 0; i < ws.length; i++) {
+                                            if (wordsWithPositionAndGroup.containsKey(i)) {
+                                                wordsWithPositionAndGroup.get(i).put(ws[i], indexFirstGroup);
                                             }
                                         }
                                     }
                                 }
-                                wordsWithPositionAndGroup.get(words[wordPosition]).put(wordPosition, indexFirstGroup);
+                                wordsWithPositionAndGroup.get(wordPosition).put(words[wordPosition], indexFirstGroup);
                                 groups.put(indexFirstGroup, mainGroup);
                                 groups.remove(currentGroup);
                             }
@@ -100,33 +96,23 @@ public class ParserApplication {
         System.out.println("Время выполнения составило " + (System.currentTimeMillis() - startTime) / 1000.0 + " сек");
     }
 
-    //todo добавить фильтр пустых строк
-    private static Set<String> getLinesFromFile(String pathToFile) {
-        try (BufferedReader br = new BufferedReader(new FileReader(pathToFile))) {
-            return br.lines().collect(Collectors.toSet());
-        } catch (IOException e) {
-            System.out.println("\nОшибка чтения файла");
-            throw new RuntimeException(e);
-        }
-    }
-
     //todo убрать скобки из вывода
-    private static void writeResultToFile(Map<Integer, Set<String[]>> groups) {
+    private static void writeResultToFile(Map<Integer, Set<String>> groups) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("result.txt"))) {
             writer.write("Количество групп с двумя и более строками: "
                     + groups.values().stream().filter(list -> list.size() >= 2).count());
             writer.newLine();
 
-            List<Set<String[]>> sortedList = groups.values()
+            List<Set<String>> sortedList = groups.values()
                     .stream().sorted((g1, g2) -> g2.size() - g1.size()).collect(Collectors.toList());
 
             int indexGroupForPrint = 1;
-            for (Set<String[]> list : sortedList) {
+            for (Set<String> list : sortedList) {
                 writer.write("\nГруппа " + indexGroupForPrint++);
                 writer.newLine();
 
-                for (String[] str : list) {
-                    writer.write(Arrays.toString(str));
+                for (String str : list) {
+                    writer.write(str);
                     writer.newLine();
                 }
             }

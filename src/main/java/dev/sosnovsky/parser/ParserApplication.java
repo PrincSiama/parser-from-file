@@ -1,6 +1,5 @@
 package dev.sosnovsky.parser;
 
-
 import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,63 +25,69 @@ public class ParserApplication {
 
 //        String pathToFile = "lng3.txt";
 
-        Set<String> lines = getLinesFromFile(pathToFile);
+//        Set<String> lines = getLinesFromFile(pathToFile);
 
-        int groupIndex = 1;
-        for (String line : lines) {
-            int wordPosition = 0;
-            if (isValid(line)) {
-                String[] words = line.split(";");
-                Integer indexFirstGroup = null;
-                for (String word : words) {
-                    if (isNotEmpty(word)) {
-                        int currentGroup = -1;
-                        if (wordsWithPositionAndGroup.containsKey(word)) {
-                            if (wordsWithPositionAndGroup.get(word).containsKey(wordPosition)) {
-                                currentGroup = wordsWithPositionAndGroup.get(word).get(wordPosition);
+        try (BufferedReader reader = new BufferedReader(new FileReader(pathToFile))) {
+            String line;
+            int groupIndex = 1;
+
+//            for (String line : lines) {
+            while ((line = reader.readLine()) != null) {
+                int wordPosition = 0;
+                if (isValid(line)) {
+                    String[] words = line.split(";");
+                    Integer indexFirstGroup = null;
+
+                    for (String word : words) {
+                        if (isNotEmpty(word)) {
+                            int currentGroup = -1;
+                            if (wordsWithPositionAndGroup.containsKey(word)) {
+                                if (wordsWithPositionAndGroup.get(word).containsKey(wordPosition)) {
+                                    currentGroup = wordsWithPositionAndGroup.get(word).get(wordPosition);
+                                } else {
+                                    wordsWithPositionAndGroup.get(word).put(wordPosition, groupIndex);
+                                    currentGroup = groupIndex++;
+                                }
                             } else {
-                                wordsWithPositionAndGroup.get(word).put(wordPosition, groupIndex);
+                                Map<Integer, Integer> newMap = new HashMap<>();
+                                newMap.put(wordPosition, groupIndex);
+                                wordsWithPositionAndGroup.put(word, newMap);
                                 currentGroup = groupIndex++;
                             }
-                        } else {
-                            Map<Integer, Integer> newMap = new HashMap<>();
-                            newMap.put(wordPosition, groupIndex);
-                            wordsWithPositionAndGroup.put(word, newMap);
-                            currentGroup = groupIndex++;
-                        }
 
-                        if (indexFirstGroup == null) {
-                            indexFirstGroup = currentGroup;
-                            if (groups.containsKey(indexFirstGroup)) {
-                                Set<String[]> listFromGroup = groups.get(indexFirstGroup);
-                                listFromGroup.add(words);
-                                groups.put(indexFirstGroup, listFromGroup);
-                            } else {
-                                Set<String[]> newSet = new HashSet<>();
-                                newSet.add(words);
-                                groups.put(indexFirstGroup, newSet);
-                            }
-                        } else if (indexFirstGroup != currentGroup) {
-                            Set<String[]> mainGroup = groups.get(indexFirstGroup);
-                            mainGroup.add(words);
-                            Set<String[]> mergeGroup;
-                            if (groups.get(currentGroup) != null) {
-                                mergeGroup = groups.get(currentGroup);
-                                mainGroup.addAll(mergeGroup);
-                                for (String[] s : mergeGroup) {
-                                    for (int i = 0; i < s.length; i++) {
-                                        if (wordsWithPositionAndGroup.containsKey(s[i])) {
-                                            wordsWithPositionAndGroup.get(s[i]).put(i, indexFirstGroup);
+                            if (indexFirstGroup == null) {
+                                indexFirstGroup = currentGroup;
+                                if (groups.containsKey(indexFirstGroup)) {
+                                    Set<String[]> listFromGroup = groups.get(indexFirstGroup);
+                                    listFromGroup.add(words);
+                                    groups.put(indexFirstGroup, listFromGroup);
+                                } else {
+                                    Set<String[]> newSet = new HashSet<>();
+                                    newSet.add(words);
+                                    groups.put(indexFirstGroup, newSet);
+                                }
+                            } else if (indexFirstGroup != currentGroup) {
+                                Set<String[]> mainGroup = groups.get(indexFirstGroup);
+                                mainGroup.add(words);
+                                Set<String[]> mergeGroup;
+                                if (groups.get(currentGroup) != null) {
+                                    mergeGroup = groups.get(currentGroup);
+                                    mainGroup.addAll(mergeGroup);
+                                    for (String[] s : mergeGroup) {
+                                        for (int i = 0; i < s.length; i++) {
+                                            if (wordsWithPositionAndGroup.containsKey(s[i])) {
+                                                wordsWithPositionAndGroup.get(s[i]).put(i, indexFirstGroup);
+                                            }
                                         }
                                     }
                                 }
+                                wordsWithPositionAndGroup.get(words[wordPosition]).put(wordPosition, indexFirstGroup);
+                                groups.put(indexFirstGroup, mainGroup);
+                                groups.remove(currentGroup);
                             }
-                            wordsWithPositionAndGroup.get(words[wordPosition]).put(wordPosition, indexFirstGroup);
-                            groups.put(indexFirstGroup, mainGroup);
-                            groups.remove(currentGroup);
                         }
+                        wordPosition++;
                     }
-                    wordPosition++;
                 }
             }
         }
@@ -112,7 +117,8 @@ public class ParserApplication {
                     + groups.values().stream().filter(list -> list.size() >= 2).count());
             writer.newLine();
 
-            List<Set<String[]>> sortedList = groups.values().stream().sorted((g1, g2) -> g2.size() - g1.size()).collect(Collectors.toList());
+            List<Set<String[]>> sortedList = groups.values()
+                    .stream().sorted((g1, g2) -> g2.size() - g1.size()).collect(Collectors.toList());
 
             int indexGroupForPrint = 1;
             for (Set<String[]> list : sortedList) {

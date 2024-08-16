@@ -15,7 +15,7 @@ public class ParserApplication {
 
     public static void main(String[] args) {
         if (args.length != 1) {
-            System.out.println("Для запуска используйте команду: java -Xmx1G -jar Parser-1.0.jar <file_for_read>");
+            System.out.println("Для запуска используйте команду: java -Xmx1G -jar parser-1.0.jar <file_for_read>");
             return;
         }
 

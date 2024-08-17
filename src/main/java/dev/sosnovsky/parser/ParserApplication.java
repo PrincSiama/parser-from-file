@@ -119,8 +119,9 @@ public class ParserApplication {
     }
 
     private static boolean isValid(String line) {
-        long count = line.chars().filter(ch -> ch == '"').count();
-        return count % 2 == 0;
+        long countSemicolon = line.chars().filter(ch -> ch == ';').count();
+        long countQuotes = line.chars().filter(ch -> ch == '"').count();
+        return countQuotes == countSemicolon * 2 + 2;
     }
 
     private static boolean isNotEmpty(String word) {
